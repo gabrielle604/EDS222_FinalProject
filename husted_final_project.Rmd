@@ -3,12 +3,12 @@ title: "Environmental exposures and geo-social determinants of health as they im
 author: "Gabrielle Husted"
 date: "2023-12-13"
 output:
-  pdf_document: default
   html_document:
     toc: true
     toc_depth: 2
     highlight: breezedark
     code_folding: show
+  pdf_document: default
 number_sections: true
 includes:
   after_body: tabset-dropdown.html
@@ -123,7 +123,6 @@ library(haven)
 library(tmap)
 library(broom)
 library(reshape2)
-
 ```
 
 ## Data
