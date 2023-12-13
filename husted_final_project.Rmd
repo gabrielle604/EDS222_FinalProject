@@ -1,0 +1,856 @@
+---
+title: "Environmental exposures and geo-social determinants of health as they impact cognition"
+author: "Gabrielle Husted"
+date: "2023-12-13"
+output:
+  html_document:
+    toc: true
+    toc_float: true
+    toc_depth: 2
+    highlight: breezedark
+    code_folding: show
+  pdf_document: default
+number_sections: true
+includes:
+  after_body: tabset-dropdown.html
+editor_options: 
+  markdown: 
+    wrap: 72
+---
+
+One in three seniors die with Alzheimer's disease and/or related
+dementia (ADRD), according to the Alzheimer's Association. The expected
+proportion of the population with ADRD is anticipated to increase
+substantially, particularly as a result of the nebulous etiology, lack
+of treatment options, and the demographic shift toward an aging
+population. There are many potential points of intervention to explore
+in pursuit of ameliorating ADRD; socioeconomic factors, education,
+access to healthcare, genetics, and lifestyle factors can all play a
+role. Through a geo-social determinants of health lens, my work
+investigates the role of chemical toxicants in the development and
+exacerbation of ADRD.
+
+The distribution of people, and consequently, their unequal exposure to
+environmental hazards, is a function of their socio-demographics.
+Neighborhood resources are shaped by the composition of neighborhoods
+and communities. This is seen through decisions such as where to locate
+new schools, healthy grocery stores, and companies that pollute.
+
+We argue that one facet of neighborhood disadvantage -- toxic chemical
+exposure -- plays a prominent role in the disparate development and
+exacerbation of ADRD neuropathology across communities. Our work focuses
+specifically on phthalates as the toxic chemical exposures of interest.
+
+Phthalates are the chemicals used to make plastics flexible and durable.
+They do not chemically bind to the material they are added to, which
+leads to them being readily absorbed into the human body. They can make
+their way into bodies through leaching into food or water that has been
+stored in containers made with phthalates, exposure to airborne
+phthalate particles when working with materials such as plastic piping
+or synthetic furniture, and our skin can absorb phthalates from lotion
+and cosmetics.
+
+Prior research has demonstrated associations between exposure to
+phthalates and detrimental health impacts -- including child brain
+development, metabolic complications, reduced educational achievement
+due to learning and attention disorders, and greater incidence of
+allergies.
+
+Phthalates make their way to the gut and impact the gut microbiome in
+ways relevant to ADRD, which supports exploring to see if phthalate
+concentrations are related to other ADRD outcomes. For example, exposure
+to DEHP, diethylhexyl phthalate, is associated with changes in the gut
+microbiome that alters the proportion of microbes in negative ways,
+leading to increased production of metabolites that are known to be
+correlated with neurodevelopment disorders. Dysbiosis in the gut is
+caused by chronic diseases (such as inflammatory bowel disease), diet,
+infection, and antibiotics, and, environmental chemicals are emerging as
+key contributors to gut dysbiosis.
+
+There is a relationship between socio-demographic factors and social
+determinants of health, and both influence exposure to phthalates and
+cognitive health.
+
+The EPA has recently emphasized its focus on the cumulative effects of
+"chemical and non-chemical stressors" on health outcomes, which
+motivates our work examining the relationship between density of TRI
+releasing phthalate chemicals (chemical stressors) and cognitive health
+outcomes, accounting for various socio-demographic characteristics --
+specifically education, age, race/ethnicity, and household income
+(non-chemical stressors).
+
+## Research Question:
+
+How does cognition and Alzheimer's neuropathology vary within the U.S.
+population in relation to geo-social determinants of health,
+specifically locations of and pollutants released by industries in the
+TRI?
+
+## Hypothesis:
+
+Hypothesis: States with more toxic phthalate industries have higher
+prevalence of the population with two or more cognitive impairments.
+Age, race/ethnicity, education, and income all contribute to moderating
+the relationship between \# of phthalate facilities and cognitive
+health.
+
+We anticipate that toxic industries are located in greater numbers and
+closer to communities with larger proportions of marginalized
+individuals, people of lower educational attainment and lower income
+level, and people with inadequate resources to mitigate harm. Informed
+by the literature identifying environmental risk factors for ADRD, we
+expect that our analysis will reflect that ADRD is more prevalent in
+communities with greater numbers of toxic manufacturing and facilities
+contributing to toxic chemical releases (air, water, or land disposal).
+
+## Getting started by loading necessary packages
+
+```{r setup,include = FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library(tidyverse)
+library(readxl)
+library(sf)
+library(dplyr)
+library(tidyr)
+library(tidyverse)
+library(ggplot2)
+library(mapview)
+library(tigris)
+library(zipcodeR)
+library(crosswalkr)
+library(labelled)
+library(haven)
+library(tmap)
+library(broom)
+library(reshape2)
+
+```
+
+## Data
+
+### Panel Study of Income Dynamics (PSID)
+
+PSID has some geographic information publicly available -- region and
+state of residence
+
+The PSID is the longest running longitudinal household study in the
+world. It began in 1968 and has collected data annually from 1968-1997,
+and biennially 1997 onward. It includes 18,000 individuals living in
+5,000 families in the US and it is a nationally representative sample.
+Descendants of these families are included in the data collection, which
+naturally grows the sample. Some health variables: disability, chronic
+health conditions, health status, BMI, health behaviors, health care
+expenditures, mental health, dementia screener, child health, and
+mortality.
+
+Only has state level data is publicly available, so that is what is used
+for this project, however, I plan to apply for and use restricted
+block-level data for my dissertation.
+
+The average prevalence of someone responding that they have two or more
+cognitive measures of impairment is a median of 150 people and a mean of
+181 people, and the variation does not appear to be randomly or equally
+distributed.
+
+\*\* I plan to analyze years 2017-2022 for my dissertation, but merging
+the waves of data across the years is way more difficult than a few
+weeks of work would allow, but it will be really worthwhile for my
+dissertation. \*\*
+
+```{r}
+## PSID CLEANING
+
+# data center automatically makes the merge if you include both family level and individual level variables in your data cart
+
+psid <- read_excel("/Users/gabriellebenoit/Documents/GitHub/EDS_222/EDS222_FinalProject/J327273.xlsx")
+
+# rename the variables
+psid <- psid %>% 
+  rename(intnum = ER30001, 
+         persnum = ER30002, 
+         STATEFP = ER66004, 
+         age = ER66017, 
+         perloss = ER68469, 
+         lossage = ER68471, 
+         losslimit = ER68472, 
+         lossmeds = ER68473, 
+         decis = ER68503, 
+         changethink = ER68510, 
+         permlossspouse = ER69596, 
+         lossagespouse = ER69598, 
+         losslimitspouse = ER69599, 
+         lossmedsspouse = ER69600, 
+         decisspouse = ER69630, 
+         changethinkspouse = ER69637, 
+         race = ER70882, 
+         highestedu = ER70891, 
+         censusneeds = ER71528, 
+         intnum2017 = ER34501, 
+         seqnum = ER34502, 
+         reltoref = ER34503, 
+         decisnotref = ER34582, 
+         dailyprob = ER34589, 
+         twoplus = ER34590)
+
+psid$plustwo = (psid$twoplus == 1)
+psid$plustwo = ifelse(psid$twoplus == 1, 1, 0)
+
+# Load 'crosswalk' data for states
+crosswalk <- read_excel("/Users/gabriellebenoit/Documents/GitHub/EDS_222/EDS222_FinalProject/crosswalk.xlsx")
+
+# create a measure of how many people answering yes to 2+ in each state
+psid_collapsed <- psid %>% group_by(STATEFP) %>% summarise(twoplus = sum(twoplus), totaln = n())
+summary(psid_collapsed$twoplus)
+psid_collapsed$prop <- psid_collapsed$twoplus/psid_collapsed$totaln
+```
+
+I loaded in the PSID data for year 2017. I relabeled the variables to
+make more intuitive sense. I created a binary variable to determine
+whether respondents answered yes to having two or more cognitive
+impairments, or no. I also created an aggregate measure of how many
+people in each state answer yes to having two or more cognitive
+impairments. Then, I loaded in state data from the U.S. Census, so that
+I'd be able to merge my three datasets ultimately by U.S.
+state/territory
+
+### Toxic Release Inventory (TRI)
+
+There are over 770 individual chemicals, 33 chemical categories included
+in the TRI. The TRI publishes new data each year in July, and updates
+the database several times throughout the year. Generally it includes
+chemicals that cause: cancer or other chronic health effects,
+significant adverse acute human health effects, significant adverse
+environmental effects
+
+The TRI documents both toxic chemical releases (into air, water, or land
+disposal) and pollution prevention activities reported by industrial and
+federal facilities. Facilities that report to the TRI include:
+manufacturing, metal mining , electric power generation, chemical
+manufacturing, hazardous waste treatment.
+
+When we subset to just our chemical of interest, phthalates, there are
+280 phthalate facilities in the U.S., with the most in Texas, and the
+least in 14 states/territories that have no phthalate facilities --
+Alaska, Colorado, Delaware, Hawaii, Maine, Montana, America Samoa,
+Commonwealth of the Northern Mariana Islands, District of Columbia,
+Guam, South Dakota, United States Virgin Islands, Vermont, Wyoming
+
+```{r}
+# load in the TRI data
+tri2017 <- read.csv("/Users/gabriellebenoit/Documents/GitHub/EDS_222/EDS222_FinalProject/2017_us.csv")
+
+## TRI CLEANING
+# fixing the unwieldy names
+names(tri2017) = gsub("X\\d+\\.\\.", "", names(tri2017))
+names(tri2017) = gsub("[0-9\\d\\.ABCD]+\\.\\.\\.", "", names(tri2017))
+names(tri2017)
+# make a smaller tri dataset with minimal variable columns
+tri2017_sm <- tri2017 %>% dplyr::select(YEAR, FACILITY.NAME, ZIP, ST, LATITUDE, LONGITUDE, CHEMICAL, ELEMENTAL.METAL.INCLUDED, CLEAN.AIR.ACT.CHEMICAL, CARCINOGEN, PFAS, STACK.AIR, WATER, UNIT.OF.MEASURE, UNDERGROUND, LANDFILLS, LAND.TREATMENT, OFF.SITE.RELEASE.TOTAL, OFF.SITE.RECYCLED.TOTAL, OFF.SITE.ENERGY.RECOVERY.T, FUGITIVE.AIR)
+
+# how many sites in each state?
+table(tri2017_sm$ST)
+
+# convert to pounds
+multiplier = ifelse(tri2017_sm$UNIT.OF.MEASURE == "Grams", 1 / 453.592, 1)
+
+tri2017_sm$FUGITIVE.AIR = multiplier * tri2017_sm$FUGITIVE.AIR
+
+tri2017_sm$STACK.AIR = multiplier * tri2017_sm$STACK.AIR
+
+tri2017_sm$WATER = multiplier * tri2017_sm$WATER
+
+tri2017_sm$UNIT.OF.MEASURE = "Pounds"
+
+# create overall sums
+
+tri2017_sm$FUGITIVE.AIR[is.na(tri2017_sm$FUGITIVE.AIR)] = 0
+
+tri2017_sm$STACK.AIR[is.na(tri2017_sm$STACK.AIR)] = 0
+
+tri2017_sm$WATER[is.na(tri2017_sm$WATER)] = 0
+
+tri2017_sm$TOTAL.POUNDS = tri2017_sm$FUGITIVE.AIR + tri2017_sm$STACK.AIR + tri2017_sm$WATER
+
+tri2017_sm$CARCINOGEN.POUNDS = ifelse(tri2017_sm$CARCINOGEN == "YES", tri2017_sm$TOTAL.POUNDS, 0)
+
+## just phthalates
+  # Filter the data to select observations with "phthalate" in the CHEMICAL column
+phthalates <- tri2017_sm %>%
+  filter(grepl("phthalate", tolower(CHEMICAL)))
+
+# View the resulting data
+head(phthalates)
+
+# add logged carcinogen (in pounds)
+phthalates <- phthalates %>%
+  mutate(log_carcin = log(CARCINOGEN.POUNDS))
+
+# download zip shapefile
+options(tigris_use_cache = TRUE)
+states <- tigris::states(cb = TRUE, year = 2020) %>% 
+  st_simplify(dTolerance = 1e3)
+
+# group by states
+phthalates_states <- phthalates %>% group_by(ST) %>% summarise(nfacilities = n()) %>% st_drop_geometry()
+
+# rename columns to be able to match
+colnames(phthalates_states)[1] ="state"
+```
+
+I loaded in TRI data from 2017. Initially I'd planned to look at all
+chemicals, and then I zeroed in on just looking at phthalates, based on
+the literature, and future work I plan to do. I cleaned up the data
+because the naming convention was strange and had a lot of special
+characters in the labels. I converted the units to pounds and also
+created overall sums for various categories (which I don't end up using
+in my analaysis, but it was a worthy exploration; I explored logging the
+phthalate as well). Then, I grouped the phthalate facilities by state
+and created a summary variable with the total number of toxic facilities
+producing phthalates.
+
+#### Merge the PSID with the Phthalate TRI
+
+```{r}
+# unite the two data sets
+
+colnames(crosswalk)[1] ="state"
+
+phthalates_states_names <- dplyr::full_join(phthalates_states, crosswalk, by = "state")
+
+# creating the merged dataset of phthalate TRI facilities and psid memory data
+ph_psid <- dplyr::full_join(psid_collapsed, phthalates_states_names, by = "STATEFP")
+
+```
+
+I merged the PSID data with the phthalate TRI data by state/territory.
+
+### American Community Survey (ACS)
+
+The ACS is nationally representative data collected by the U.S. Census
+Bureau, and it provides detailed demographic, social, economic, and
+housing information to guide public policy and resource allocation at
+the local, state, and national levels; they have 1yr and 5 yr estimates
+on variety of metrics.
+
+```{r}
+# add in ACS demographic data to the "ph_psid" data set
+
+library(tidycensus)
+#census_api_key("YOUR KEY GOES HERE", install = TRUE)
+
+remotes::install_github("walkerke/tidycensus")
+library(tidyverse)
+library(tidycensus)
+
+## POPULATION
+pop = get_decennial(geography = "state", 
+                  variables = "P1_001N", 
+                  year = 2020)
+colnames(pop)[4] ="population"
+head(pop, 5)
+
+# INCOME
+variables <- c("B19013_001")  # B19013_001 represents median household income
+
+hh_income <- get_acs(geography = "state", variables = variables, year = 2017)
+
+head(hh_income)
+
+# AGE
+median_age <- get_acs(
+  geography = "state",
+  variables = "B01002_001",
+  year = 2020
+)
+
+# EDUCATION
+# educational attainment over time
+college_vars <- c("B15002_015",
+                  "B15002_016",
+                  "B15002_017",
+                  "B15002_018",
+                  "B15002_032",
+                  "B15002_033",
+                  "B15002_034",
+                  "B15002_035")
+
+years <- 2010:2019
+names(years) <- years
+
+college_by_year <- map_dfr(years, ~{
+  get_acs(
+    geography = "state",
+    variables = college_vars,
+    summary_var = "B15002_001",
+    survey = "acs1",
+    year = .x
+  )
+}, .id = "year")
+
+college_by_year %>% 
+  arrange(NAME, variable, year)
+
+percent_college_by_year <- college_by_year %>%
+  group_by(NAME, year) %>%
+  summarize(numerator = sum(estimate),
+            denominator = first(summary_est)) %>%
+  mutate(pct_college = 100 * (numerator / denominator)) %>%
+  pivot_wider(id_cols = NAME,
+              names_from = year,
+              values_from = pct_college)
+
+## RACE/ETHNICITY
+var20 <- load_variables(year = 2020, dataset = "pl")
+# American Indian and Alaskan Native P1_005N
+# White P1_003N
+# Black or African American P1_004N
+# Asian P1_006N
+# Native Hawaiian and Other Pacific Islander P1_007N
+# Some Other Race P1_008N
+# Two or More P1_009N
+# Hispanic or Latino P2_002N
+
+aian <- get_decennial(
+  geography = "state",
+  variables = "P1_005N",
+  year = 2020,
+  sumfile = "pl"
+)
+
+white <- get_decennial(
+  geography = "state",
+  variables = "P1_003N",
+  year = 2020,
+  sumfile = "pl"
+)
+
+black <- get_decennial(
+  geography = "state",
+  variables = "P1_004N",
+  year = 2020,
+  sumfile = "pl"
+)
+
+asian <- get_decennial(
+  geography = "state",
+  variables = "P1_006N",
+  year = 2020,
+  sumfile = "pl"
+)
+
+nat_hw_pac <- get_decennial(
+  geography = "state",
+  variables = "P1_007N",
+  year = 2020,
+  sumfile = "pl"
+)
+
+other <- get_decennial(
+  geography = "state",
+  variables = "P1_008N",
+  year = 2020,
+  sumfile = "pl"
+)
+
+multiple <- get_decennial(
+  geography = "state",
+  variables = "P1_009N",
+  year = 2020,
+  sumfile = "pl"
+)
+
+hisp_lat <- get_decennial(
+  geography = "state",
+  variables = "P2_002N",
+  year = 2020,
+  sumfile = "pl"
+)
+
+
+# this approach doesn't work - I was 
+# RACE/ETHNICITY
+# Specify the variables for race
+# variables <- c("B01001_001", "B02001_002", "B02001_003", "B02001_004", "B02001_005", "B02001_006", "B02001_007", "B02001_008", "B02001_009")
+
+# Use the get_acs function to retrieve the data
+# race <- get_acs(geography = "state", variables = variables, year = 2017)
+
+# Create a data frame with labels for each race
+# race_labels <- data.frame(
+ # race_code = c("B02001_002", "B02001_003", "B02001_004", "B02001_005", "B02001_006", "B02001_007", "B02001_008", "B02001_009"),
+ # race_label = c("White", "Black or African American", "American Indian and Alaska Native", "Asian", "Native Hawaiian and Other Pacific Islander", "Some other race", "Two or more races", "Hispanic or Latino"))
+
+# Merge the race labels with the acs_data_race
+# race_labeled <- race %>%
+ # left_join(race_labels, by = c("variable" = "race_code"))
+
+# Spread the data into wide format and clean column names
+# race_wide <- race_labeled %>%
+ #  spread(key = race_label, value = estimate) %>%
+ #  select(-variable, -moe)
+
+# View the resulting wide-format data
+# head(race_wide)
+```
+
+I gathered the ACS data via an API and the tidycensus package. I
+retrieved population, income, median age, percent college completion,
+and race/ethnicity for each state/territory.
+
+#### Combine the datasets: PSID, Phthalate TRI, and ACS demographics
+
+```{r}
+# combine ph_psid and ACS demographics
+
+## population
+colnames(pop)[2] ="STATE_NAME"
+pop <- pop %>% select(-GEOID, -variable)
+merged <- dplyr::right_join(ph_psid, pop, by = "STATE_NAME")
+
+## income
+colnames(hh_income)[2] ="STATE_NAME"
+colnames(hh_income)[4] ="med_hh_income"
+hh_income <- hh_income %>% select(-GEOID, -variable, -moe)
+merged <- dplyr::right_join(merged, hh_income, by = "STATE_NAME")
+
+## age
+colnames(median_age)[4] ="med_age"
+colnames(median_age)[2] ="STATE_NAME"
+median_age <- median_age %>% select(-moe, -GEOID, -variable)
+merged <- dplyr::right_join(merged, median_age, by = "STATE_NAME")
+
+## education
+percent_college_by_year <- percent_college_by_year %>% select(-"2010", -"2011", -"2012", -"2013", -"2014", -"2015", -"2016", -"2018", -"2019")
+colnames(percent_college_by_year)[1] ="STATE_NAME"
+colnames(percent_college_by_year)[2] ="percent_college"
+merged <- dplyr::right_join(merged, percent_college_by_year, by = "STATE_NAME")
+
+## race
+colnames(multiple)[2] ="STATE_NAME"
+colnames(multiple)[4] ="multiple"
+multiple <- multiple %>% select(-GEOID, -variable)
+merged <- dplyr::right_join(merged, multiple, by = "STATE_NAME")
+
+colnames(aian)[2] ="STATE_NAME"
+colnames(aian)[4] ="aian"
+aian <- aian %>% select(-"GEOID", -variable)
+merged <- dplyr::right_join(merged, aian, by = "STATE_NAME")
+
+colnames(white)[2] ="STATE_NAME"
+colnames(white)[4] ="white"
+white <- white %>% select(-"GEOID", -variable)
+merged <- dplyr::full_join(merged, white, by = "STATE_NAME")
+
+colnames(black)[2] ="STATE_NAME"
+colnames(black)[4] ="black"
+black <- black %>% select(-"GEOID", -variable)
+merged <- dplyr::right_join(merged, black, by = "STATE_NAME")
+
+colnames(asian)[2] ="STATE_NAME"
+colnames(asian)[4] ="asian"
+asian <- asian %>% select(-"GEOID", -variable)
+merged <- dplyr::right_join(merged, asian, by = "STATE_NAME")
+
+colnames(nat_hw_pac)[2] ="STATE_NAME"
+colnames(nat_hw_pac)[4] ="nat_hw_pac"
+nat_hw_pac <- nat_hw_pac %>% select(-"GEOID", -variable)
+merged <- dplyr::right_join(merged, nat_hw_pac, by = "STATE_NAME")
+
+colnames(other)[2] ="STATE_NAME"
+colnames(other)[4] ="other"
+other <- other %>% select(-"GEOID", -variable)
+merged <- dplyr::right_join(merged, other, by = "STATE_NAME")
+
+colnames(hisp_lat)[2] ="STATE_NAME"
+colnames(hisp_lat)[4] ="hisp_lat"
+hisp_lat <- hisp_lat %>% select(-"GEOID", -variable)
+merged <- dplyr::right_join(merged, hisp_lat, by = "STATE_NAME")
+
+# save the cleaned and merged data file
+# write.csv(merged, file = "merged_psid_tri_acs.csv")
+```
+
+I combined the PSID, phthalate TRI, and ACS data together, via the U.S.
+state/territory name.
+
+## Visualization
+
+In order to visualize the data, I created a map that depicts the number
+of phthalate facilities per state (the ligher the color, the more
+facilities). I created a simple plot showing the relationship between
+total number of phthalate facilities per state and the number of people
+with two or more memory impairments per state. I made a histogram
+showing the distribution of answers to the dementia question of interest
+(two or more memory impairments). Answering "1" means two or more
+problems endorsed (477 people in the sample). Answering "5" means the
+respondent has fewer than two problems endorsed (1,786 people in the
+sample. Answering "0" means the question was not applicable to the
+respondent (24,182 people). I made a chloropleth map depicting the
+median age in each state, based in ACS data.
+
+```{r}
+# visualize the density of toxic release sites that release phthalate chemicals across the U.S.
+
+phthalates_states <- phthalates %>% group_by(ST) %>% summarise(nfacilities = n()) %>% st_drop_geometry()
+
+phthalates_states_shape <- states %>% left_join(phthalates_states, by = c('STUSPS' = 'ST')) %>% mutate(nfacilities = replace_na(nfacilities, 0))
+
+ggplot() +
+  geom_sf(data = phthalates_states_shape, aes(fill = nfacilities))
+
+# visualize the density of two plus mem conditions across the U.S.
+#merged_states_shape <- states %>% left_join(merged, by = c('STATEFP' = 'STATEFP')) %>% mutate(twoplus = replace_na(nfacilities, 0))
+
+#ggplot() +
+ # geom_sf(data = st_geometry(states))
+
+#ggplot() +
+ # geom_sf(data = phthalates_states_shape, aes(fill = nfacilities))
+
+
+
+# plot just phthalate TRIs and twoplus
+plot(twoplus ~ totaln, data = merged)
+
+ggplot(merged, aes(x = totaln, y = twoplus)) +
+  geom_point() +
+  labs(x = "Total TRI facilities releasing phthalates",
+       y = "Total individuals with cognitive impairment") +
+  theme_minimal() +
+  theme(axis.text = element_text(size = 16))
+
+
+# showing how many people within the data set respond that they have 2+ memory issues listed on the survey
+two_plus <- ggplot(psid, aes(x = twoplus)) +
+  geom_histogram(binwidth = 1, fill = "lightblue", color = "lightblue", alpha = 0.7) +
+  labs(title = "Whether two or more problems were endorsed for the AD8 Screener?",
+       x = "two plus",
+       y = "Frequency")+
+  theme_minimal()
+two_plus
+  # 1 Two or more problems endorsed (477)
+  # 5 Fewer than two problems endorsed (1,786)
+  # 0 Inap.(24,182)
+table(psid$twoplus)
+
+# median age
+us_median_age <- get_acs(
+  geography = "state",
+  variables = "B01002_001",
+  year = 2017,
+  survey = "acs1",
+  geometry = TRUE,
+  resolution = "20m"
+) %>%
+  shift_geometry()
+ 
+ # Styled choropleth of US median age with ggplot2
+ggplot(data = us_median_age, aes(fill = estimate)) + 
+  geom_sf() + 
+  scale_fill_distiller(palette = "Greens", 
+                       direction = 1) + 
+  labs(title = "  Median Age by State, 2019",
+       caption = "Data source: 2019 1-year ACS, US Census Bureau",
+       fill = "ACS estimate") + 
+  theme_void()
+
+```
+
+## Methods & Analysis:
+
+We utilize the Panel Study of Income Dynamics (PSID) in
+conjunction with the Environmental Protection Agency (EPA) Toxic Release
+Inventory (TRI) and American Community Survey (ACS) to examine the
+relationship between chemical toxicants and ADRD prevalence among the
+U.S. population.
+
+I performed a linear regression, a multiple linear regression, and
+explored which variables explained what percentage of the variation we
+are seeing in our data in the relationship between phthalate TRI
+facilities, and PSID respondents with two or more cognitive impairments,
+the benchmark of ADRD.
+
+I checked the assumptions of linear regression: (1) the population
+relationship is linear in parameters with an additive disturbance --
+YES, it appears that changes in the independent variables are associated
+with constant and proportional changes in the dependent variable,
+cognitive impairment (2) Our X variable is exogenous -- YES (3) The X
+variable has variation -- YES (4) The population disturbance u is
+independently and identically distributed as a normal random variable
+with mean zero. And, errors cannot vary with X (homoscedasticity)
+
+Initially, I checked the Q-Q plot to examine how well the outcome
+variable and the main predictor variables match up with the normal
+distribution. They are both askew at the tails, so the data is deviating
+from the normal distribution at the extreme high and extreme low values,
+but it is close enough that we proceed with our analysis. I plotted the
+residuals, and they appear relatively normally distributed.
+
+The multiple linear regression equation is:
+$cognition = total phthalates + percent college + median age + median household income + multiple races + aian + white + hisplat + black + other + asian + nat_hw_pac$
+
+"aian" = American Indian and Alaskan Native
+"hisplat" = Hispanic or Latino
+"nat_hw_pac" = Native Hawaiian and Pacific Islander
+
+```{r}
+## qq plot for outcome variable and main predictor variable
+qqnorm(merged$twoplus)
+qqline(merged$twoplus)
+
+qqnorm(merged$totaln)
+qqline(merged$totaln)
+
+# perform a simple regression looking at the number [memory condition] in each state and number TRI in each state
+tri.twoplus.lm <- lm(twoplus ~ totaln, data = merged)
+summary(tri.twoplus.lm)
+
+# adding in demographics
+tri.plustwo.lm <- lm(twoplus ~ totaln + percent_college + med_age + med_hh_income + multiple + aian + white + hisp_lat + black + other + asian + nat_hw_pac, data = merged)
+summary(tri.plustwo.lm)
+
+# plot multiple linear regression
+model <- lm(twoplus ~ totaln + percent_college + med_age + med_hh_income + multiple + aian + white + hisp_lat + black + other + asian + nat_hw_pac, data = merged)
+
+### this figure is good
+model %>%
+  augment() %>%
+  melt(measure.vars = c("totaln", "percent_college", "med_age", "hisp_lat"), variable.name = "IV") %>%
+  ggplot(aes(x = value, y = twoplus)) +
+  geom_smooth(method = "lm") +
+  facet_wrap(~c("totaln", "percent_college", "med_age", "hisp_lat"), scales = "free_x") +
+  theme_classic()
+
+
+# (i) totaln regressed on twoplus
+mod_ph<- lm(twoplus ~ totaln, data = merged) 
+
+# (ii) totaln and percent_college regressed on twoplus
+mod_col <- lm(twoplus ~ percent_college, data = merged)
+
+# can create a new summary object, which will contain the r-squared values
+# mysumm = summary(mod_size)
+# View(mysumm)
+
+# Recovering R2 from the regressions
+R2_ph = summary(mod_ph)$r.squared
+R2_col = summary(mod_col)$r.squared
+print(paste0("R2 of density of TRI in a state on cognition is: ", round(R2_ph,2)))
+# 89% of the variation of size is explained by latitude
+print(paste0("R2 of percent with college degree on cognition is: ", round(R2_col,2)))
+# 0% of the variation of water temperature is explained by latitude
+
+## plot residuals
+residuals <- residuals(model)
+
+plot(model$fitted.values, residuals, main = "Residuals vs. Fitted Values",
+     xlab = "Fitted Values", ylab = "Residuals")
+abline(h = 0, col = "red")  # Add a horizontal line at y = 0
+
+hist(residuals, main = "Histogram of Residuals")
+qqnorm(residuals); qqline(residuals, col = 2)
+
+```
+
+## Interpretation
+
+Applying a simple regression of just "twoplus" on "totaln" without all
+the other control variables first, the correlation coefficient is 0.3228
+(SE: 0.0163, P = 0.00).
+
+When we add in the control variables, the magnitude of the coefficient
+drops to to 0.2449 (SE: 0.0309, P = 0.00).
+
+This multiple linear regression conveys to us that the number of
+facilities producing phthalates in a state is correlated with the number
+of individuals in a state that have two or more memory conditions, which
+is the benchmark for cognitive impairment and likely development of
+Alzheimer's and related Dementia.
+
+An increase in one unit of total phthalate facilities in the state is
+predicted to increase the number of individuals that have two or more
+memory conditions by one quarter of a person, holding education, age,
+race/ethnicity, and income constant. Of course, a quarter of a person is
+a silly measure, but over time and among numerous facilities, it's
+substantial.
+
+The variables: people identifying as having multiple races/ethnicities,
+people identifying as hispanic or latino, and people identifying their
+race as other (so, not white, black, american indian and alaska native,
+asian, or native hawaiian and pacific islander) were significant
+predicting variables as well.
+
+This analysis in its current form likely suffers from omitted variable
+bias. It's possible there is another variable ("z") that is correlated
+with one of our explanatory variables ("x"), and that the omitted
+variable influences our outcome variable. For my dissertation, I will
+dig into this more, and I also plan to analyze the longitudinal PSID
+data for years 2017-2022.
+
+## Conclusion
+
+Plastic pollution is a modifiable risk factor for ADRD. Identifying
+communities harmed by these toxic facilities and channeling resources,
+funding, and mitigation efforts is critical. Policy change is needed to
+reduce and regulate plastics in commercial products so that avoiding
+plastics and plastic pollution is achievable for all populations.
+
+In my future work, I plan to utilize the already available coordinates of TRI facilities and the restricted access block level data for the PSID. This will allow for a more precise analysis of the relationship between TRI facilities and cognition. I plan to hone in the units of measurement for each of the control variables. Using multiple waves of PSID data (2017-2022) will allow for analysis over time. Possible considerations is the number of people with cognitive impairments as TRI facilities rise over time, holding age constant. Another avenue to explore would be comparing age and income matched areas in terms of cognition and differing TRI facility densities, to capture whether TRI facility pollution is a leading cause of cognition rising in an underserved census block. A lot to consider, but with time and longitudinal, precise data, knowledge regarding the role of phthalate chemicals impacting cognitions, and consequently ADRD, should arise. 
+
+## References
+
+Covert, B. (2016, February 18). Race Best Predicts Whether You Live Near
+Pollution. Www.thenation.com.
+<https://www.thenation.com/article/archive/race-best-predicts-whether-you-live-near-pollution/>
+\*\*featured in CleanEarth4Kids
+
+Environmental Protection Agency. (2017). Toxics Release Inventory (TRI)
+Data for the year 2017. Retrieved from
+<https://www.epa.gov/toxics-release-inventory-tri-program/tri-basic-data-files-calendar-years-1987-2017>
+
+Factor-Litvak, P., Insel, B., Calafat, A. M., Liu, X., Perera, F., Rauh,
+V. A., & Whyatt, R. M. (2014). Persistent Associations between Maternal
+Prenatal Exposure to Phthalates on Child IQ at Age 7 Years. PLOS ONE,
+9(12), e114003. <https://doi.org/10.1371/journal.pone.0114003>
+
+Frey, Christopher H., 2022, EPA Researchers Release Cumulative Impacts
+Report, Prioritizing Environmental Justice in New Research Cycle.
+Environmental Protection Agency. Science Matters.
+
+Lei, M., Menon, R., Manteiga, S., Alden, N., Hunt, C., Alaniz, R. C.,
+Lee, K., & Jayaraman, A. (2019). Environmental Chemical Diethylhexyl
+Phthalate Alters Intestinal Microbiota Community Structure and
+Metabolite Profile in Mice. mSystems, 4(6), 10.1128/msystems.00724-19.
+<https://doi.org/10.1128/msystems.00724-19>
+
+Li, N., Papandonatos, G. D., Calafat, A. M., Yolton, K., Lanphear, B.
+P., Chen, A., & Braun, J. M. (2020). Gestational and childhood exposure
+to phthalates and child behavior. Environment International, 144,
+106036. <https://doi.org/10.1016/j.envint.2020.106036>
+
+Marmot, M. (2017). The Health Gap: The Challenge of an Unequal World:
+the argument. International Journal of Epidemiology, 46(4), 1312--1318.
+<https://doi.org/10.1093/ije/dyx163>
+
+Panel Study of Income Dynamics, public use dataset [restricted use data,
+if appropriate]. Produced and distributed by the Survey Research Center,
+Institute for Social Research, University of Michigan, Ann Arbor, MI
+(2017).
+
+Parker, L. (2022, May 2). Microplastics are in our bodies. how much do
+they harm us? Environment. Retrieved September 29, 2022, from
+<https://www.nationalgeographic.com/environment/article/microplastics-are-in-our-bodies-how-much-do-they-harm-us?loggedin=true>
+
+PSID AD8 Dementia Screen, link:
+<chrome-extension://efaidnbmnnnibpcajpcglclefindmkaj/https://psidonline.isr.umich.edu/Publications/Papers/tsp/2019-01_AD8_Dementia_PSID.pdf>
+
+Tierney, A.L., Nelson, C.A., 2009. Brain development and the role of
+experience in the early years. Zero Three 30, 9--13.
+
+U.S. Census Bureau. (2010-2020) American Community Survey Public Use
+Microdata Samples. Retrieved via tidycensus package.
+
+Walker K, Herman M (2023). tidycensus: Load US Census Boundary and
+Attribute Data as 'tidyverse' and 'sf'-Ready Data Frames. R package
+version 1.5, <https://walker-data.com/tidycensus/>.
